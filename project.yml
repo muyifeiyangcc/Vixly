@@ -1,0 +1,35 @@
+name: Vixly
+options:
+  bundleIdPrefix: app.myfy
+  deploymentTarget:
+    iOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "14.0"
+    DEVELOPMENT_TEAM: ""
+targets:
+  Vixly:
+    type: application
+    platform: iOS
+    sources:
+      - path: Vixly
+        excludes:
+          - "*.xcodeproj"
+    resources:
+      - path: Vixly/Assets.xcassets
+      - path: Vixly/Base.lproj
+    info:
+      path: Vixly/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.myfy.test
+        INFOPLIST_FILE: Vixly/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/Frameworks"
+        SWIFT_EMIT_LOC_STRINGS: YES
+    dependencies:
+      - sdk: StoreKit.framework
