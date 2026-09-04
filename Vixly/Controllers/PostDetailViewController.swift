@@ -765,13 +765,19 @@ class PostDetailViewController: BaseViewController {
                 let title = UILabel()
                 title.font = UIFont.systemFont(ofSize: 13, weight: .bold)
                 title.textColor = UIColor(hex: "#111111")
-                title.text = "\(categoryName) · \(item.product.isEmpty ? item.brand : item.product)"
+                let productName = item.product.trimmingCharacters(in: .whitespacesAndNewlines)
+                let brandName = item.brand.trimmingCharacters(in: .whitespacesAndNewlines)
+                let displayName = productName.isEmpty ? brandName : productName
+                title.text = isUnlocked && !displayName.isEmpty ? "\(categoryName) · \(displayName)" : categoryName
                 innerView.addSubview(title)
                 let detail = UILabel()
                 detail.font = AppFont.caption()
                 detail.textColor = UIColor(hex: "#777777")
-                let detailParts = [item.color.isEmpty ? nil : item.color, item.size.isEmpty ? nil : "Size \(item.size)"].compactMap { $0 }
+                let color = item.color.trimmingCharacters(in: .whitespacesAndNewlines)
+                let size = item.size.trimmingCharacters(in: .whitespacesAndNewlines)
+                let detailParts = [color.isEmpty ? nil : color, size.isEmpty ? nil : "Size \(size)"].compactMap { $0 }
                 detail.text = detailParts.joined(separator: " · ")
+                detail.isHidden = !isUnlocked
                 innerView.addSubview(detail)
                 let action = UIImageView(image: UIImage(named: isUnlocked ? "right_arrow" : "lock") ?? UIImage(systemName: isUnlocked ? "chevron.right" : "lock"))
                 action.tintColor = UIColor(hex: "#AAAAAA")
@@ -797,13 +803,25 @@ class PostDetailViewController: BaseViewController {
                 }
                 title.snp.makeConstraints { make in
                     make.leading.equalTo(iconBackground.snp.trailing).offset(12)
-                    make.top.equalToSuperview().offset(18)
                     make.trailing.equalTo(action.snp.leading).offset(-12)
+                    if isUnlocked {
+                        make.top.equalToSuperview().offset(18)
+                    } else {
+                        make.centerY.equalToSuperview()
+                    }
                 }
-                detail.snp.makeConstraints { make in
-                    make.leading.equalTo(title)
-                    make.top.equalTo(title.snp.bottom).offset(4)
-                    make.trailing.equalTo(title)
+                if isUnlocked {
+                    detail.snp.makeConstraints { make in
+                        make.leading.equalTo(title)
+                        make.top.equalTo(title.snp.bottom).offset(4)
+                        make.trailing.equalTo(title)
+                    }
+                } else {
+                    detail.snp.makeConstraints { make in
+                        make.leading.trailing.equalTo(title)
+                        make.top.equalTo(title.snp.bottom)
+                        make.height.equalTo(0)
+                    }
                 }
                 action.snp.makeConstraints { make in
                     make.trailing.equalToSuperview().offset(0)
@@ -1048,7 +1066,7 @@ class PostDetailViewController: BaseViewController {
                     let sheet: UIViewController
                     if let category = self.pendingUnlockCategory,
                        let item = self.itemForCategory(category, in: post.items) {
-                        sheet = ItemEditorSheetViewController(category: category, item: item)
+                        sheet = ReadonlyItemDetailsSheetViewController(category: category, item: item)
                     } else {
                         sheet = ReadonlyItemDetailsSheetViewController(items: post.items)
                     }
@@ -1066,7 +1084,7 @@ class PostDetailViewController: BaseViewController {
         if row.tag == 1, let post,
            let category = row.accessibilityIdentifier,
            let item = itemForCategory(category, in: post.items) {
-            let sheet = ItemEditorSheetViewController(category: category, item: item)
+            let sheet = ReadonlyItemDetailsSheetViewController(category: category, item: item)
             sheet.modalPresentationStyle = .overFullScreen
             present(sheet, animated: false)
         } else {
@@ -1237,90 +1255,71 @@ final class ReadonlyItemDetailsSheetViewController: UIViewController {
             make.trailing.equalToSuperview().offset(-18)
             make.width.height.equalTo(24)
         }
-        let subtitle = UILabel()
-        subtitle.text = selectedItem == nil ? "Item details from this OOTD" : "Item details shown with this OOTD"
-        subtitle.font = AppFont.caption()
-        subtitle.textColor = AppTheme.textSecondary
-        sheet.addSubview(subtitle)
-        subtitle.snp.makeConstraints { make in
-            make.top.equalTo(title.snp.bottom).offset(8)
+
+        let detailsStack = UIStackView()
+        detailsStack.axis = .vertical
+        detailsStack.spacing = 16
+        sheet.addSubview(detailsStack)
+        detailsStack.snp.makeConstraints { make in
+            make.top.equalTo(title.snp.bottom).offset(24)
             make.leading.trailing.equalToSuperview().inset(16)
         }
-        if let category, let selectedItem {
+
+        if let selectedItem {
             let fields: [(String, String)] = [
                 ("Brand", selectedItem.brand),
                 ("Product", selectedItem.product),
                 ("Color", selectedItem.color),
                 ("Size", selectedItem.size)
             ]
-            var previous: UIView = subtitle
-            for (index, field) in fields.enumerated() {
-                let label = UILabel()
-                label.text = field.0
-                label.font = AppFont.caption(.bold)
-                label.textColor = AppTheme.textPrimary
-                sheet.addSubview(label)
-                label.snp.makeConstraints { make in
-                    make.top.equalTo(previous.snp.bottom).offset(14)
-                    make.leading.equalToSuperview().offset(16)
-                }
-                let value = UILabel()
-                value.text = field.1.isEmpty ? "—" : field.1
-                value.font = AppFont.caption()
-                value.textColor = AppTheme.textSecondary
-                value.backgroundColor = AppTheme.backgroundColor
-                value.layer.cornerRadius = 10
-                value.layer.borderWidth = 1
-                value.layer.borderColor = AppTheme.authFieldBorderColor.cgColor
-                value.clipsToBounds = true
-                value.textAlignment = .left
-                sheet.addSubview(value)
-                value.snp.makeConstraints { make in
-                    make.top.equalTo(label.snp.bottom).offset(6)
-                    make.leading.trailing.equalToSuperview().inset(16)
-                    make.height.equalTo(46)
-                }
-                previous = value
-                if index == fields.count - 1 {
-                    let closeButton = PostFlowButton(title: "Close", filled: true)
-                    closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-                    sheet.addSubview(closeButton)
-                    closeButton.snp.makeConstraints { make in
-                        make.top.equalTo(value.snp.bottom).offset(14)
-                        make.leading.trailing.equalToSuperview().inset(16)
-                        make.height.equalTo(44)
-                    }
-                }
+            for (name, value) in fields where !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                addDetailField(name: name, value: value, to: detailsStack)
             }
-            return
-        }
-        let categories: [(String, [PostItem])]
-        if let category, let selectedItem {
-            categories = [(category, [selectedItem])]
         } else {
-            categories = [("Top", items.tops), ("Bottom", items.bottoms), ("Shoes", items.shoes), ("Accessories", items.accessories)]
-        }
-        var previous: UIView = subtitle
-        for (category, values) in categories where !values.isEmpty {
-            let item = values[0]
-            let row = UIView()
-            row.backgroundColor = AppTheme.backgroundColor
-            row.layer.cornerRadius = 12
-            sheet.addSubview(row)
-            let label = UILabel()
-            label.font = AppFont.caption(.bold)
-            label.textColor = AppTheme.textPrimary
-            label.numberOfLines = 0
-            label.text = "\(category) · \(item.product.isEmpty ? item.brand : item.product)\n\(item.brand) · \(item.color) · Size \(item.size)"
-            row.addSubview(label)
-            label.snp.makeConstraints { make in make.leading.trailing.equalToSuperview().inset(14); make.centerY.equalToSuperview() }
-            row.snp.makeConstraints { make in
-                make.top.equalTo(previous.snp.bottom).offset(10)
-                make.leading.trailing.equalToSuperview().inset(16)
-                make.height.equalTo(58)
+            let categories: [(String, [PostItem])] = [
+                ("Top", items.tops),
+                ("Bottom", items.bottoms),
+                ("Shoes", items.shoes),
+                ("Accessories", items.accessories)
+            ]
+            for (category, values) in categories {
+                guard let item = values.first else { continue }
+                let value = item.product.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? item.brand : item.product
+                guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+                addDetailField(name: category, value: value, to: detailsStack)
             }
-            previous = row
         }
+
+        let closeButton = PostFlowButton(title: "Close", filled: true)
+        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        sheet.addSubview(closeButton)
+        closeButton.snp.makeConstraints { make in
+            make.top.greaterThanOrEqualTo(detailsStack.snp.bottom).offset(24)
+            make.leading.trailing.equalToSuperview().inset(16)
+            make.bottom.equalToSuperview().offset(-19)
+            make.height.equalTo(44)
+        }
+    }
+
+    private func addDetailField(name: String, value: String, to stack: UIStackView) {
+        let fieldStack = UIStackView()
+        fieldStack.axis = .vertical
+        fieldStack.spacing = 4
+
+        let nameLabel = UILabel()
+        nameLabel.text = name
+        nameLabel.font = AppFont.caption(.bold)
+        nameLabel.textColor = AppTheme.textPrimary
+
+        let valueLabel = UILabel()
+        valueLabel.text = value
+        valueLabel.font = AppFont.body()
+        valueLabel.textColor = AppTheme.textSecondary
+        valueLabel.numberOfLines = 0
+
+        fieldStack.addArrangedSubview(nameLabel)
+        fieldStack.addArrangedSubview(valueLabel)
+        stack.addArrangedSubview(fieldStack)
     }
 
     override func viewDidAppear(_ animated: Bool) {

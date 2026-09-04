@@ -2,6 +2,8 @@ import UIKit
 import SnapKit
 
 final class AIStylistViewController: BaseViewController {
+    private static let paymentPromptShownKeyPrefix = "AI_STYLIST_PAYMENT_PROMPT_SHOWN_"
+
     private let headerView = UIView()
     private let coinPill = UIView()
     private let coinCountLabel = UILabel()
@@ -351,15 +353,36 @@ final class AIStylistViewController: BaseViewController {
         guard let coins = DataRepository.shared.currentUser?.coins else { return }
         guard coins >= 10 else { showNotEnoughCoins(); return }
 
-        let alert = CommonAlertView(title: "Send Message", message: "This will cost 10 coins. Continue?", cancelTitle: "Cancel", confirmTitle: "Send")
-        alert.onConfirm = { [weak self] in
-            guard let self else { return }
-            guard DataRepository.shared.consumeCoins(amount: 10) else { return }
-            DataRepository.shared.sendAIMessage(content: text)
-            self.textField.text = ""
-            self.textChanged()
+        if shouldShowPaymentPrompt {
+            markPaymentPromptShown()
+            let alert = CommonAlertView(title: "Send Message", message: "This will cost 10 coins. Continue?", cancelTitle: "Cancel", confirmTitle: "Send")
+            alert.onConfirm = { [weak self] in
+                self?.sendAIMessage(text)
+            }
+            alert.show()
+        } else {
+            sendAIMessage(text)
         }
-        alert.show()
+    }
+
+    private var shouldShowPaymentPrompt: Bool {
+        guard let userId = DataRepository.shared.currentUser?.id else { return true }
+        return !UserDefaults.standard.bool(forKey: Self.paymentPromptShownKeyPrefix + userId)
+    }
+
+    private func markPaymentPromptShown() {
+        guard let userId = DataRepository.shared.currentUser?.id else { return }
+        UserDefaults.standard.set(true, forKey: Self.paymentPromptShownKeyPrefix + userId)
+    }
+
+    private func sendAIMessage(_ text: String) {
+        guard DataRepository.shared.consumeCoins(amount: 10) else {
+            showNotEnoughCoins()
+            return
+        }
+        DataRepository.shared.sendAIMessage(content: text)
+        textField.text = ""
+        textChanged()
     }
 
     private func showNotEnoughCoins() {

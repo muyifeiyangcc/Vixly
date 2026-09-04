@@ -50,18 +50,11 @@ class AppRouter {
         window?.rootViewController = tabBarVC
     }
     
-    func showSignIn(from viewController: UIViewController) {
-        let signInVC = SignInViewController()
-        signInVC.hidesBottomBarWhenPushed = true
-
-        if let navigationController = viewController.navigationController {
-            navigationController.pushViewController(signInVC, animated: true)
-        } else if let tabBarController = viewController as? UITabBarController,
-                  let navigationController = tabBarController.selectedViewController as? UINavigationController {
-            navigationController.pushViewController(signInVC, animated: true)
-        } else if let navigationController = window?.rootViewController as? UINavigationController {
-            navigationController.pushViewController(signInVC, animated: true)
-        }
+    func showSignIn(from _: UIViewController) {
+        // Guest-only sign-in prompts should return to the same landing page
+        // shown after launch. The landing page then lets the user choose
+        // email sign-in or sign-up after accepting the agreements.
+        showOnboarding()
     }
     
     func handleLoginSuccess() {

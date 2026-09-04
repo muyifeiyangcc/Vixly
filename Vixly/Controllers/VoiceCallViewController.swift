@@ -245,8 +245,9 @@ class VoiceCallViewController: UIViewController {
     
     private func startRingingTone() {
         ringingTimer?.invalidate()
-        AudioServicesPlaySystemSound(1007)
-        ringingTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in AudioServicesPlaySystemSound(1007) }
+        // Use the iOS telephony-style ringing tone instead of an SMS alert.
+        AudioServicesPlaySystemSound(1151)
+        ringingTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in AudioServicesPlaySystemSound(1151) }
     }
     
     private func connectCall() {

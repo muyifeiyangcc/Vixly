@@ -187,7 +187,7 @@ class OnboardingViewController: UIViewController {
         let alert = CommonAlertView(
             title: "Please Agree",
             message: "You must agree to the Terms of Service and Privacy Policy to continue.",
-            cancelTitle: "OK",
+            cancelTitle: "Cancel",
             confirmTitle: "OK"
         )
         alert.show()

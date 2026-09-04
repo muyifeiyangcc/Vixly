@@ -19,7 +19,7 @@ class ItemBreakdownViewController: UIViewController {
     
     private let subtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Item details are optional; adding at least one item is recommended."
+        label.text = "Add at least one item. Product is required for each item."
         label.font = AppFont.caption()
         label.textColor = AppTheme.textSecondary
         label.numberOfLines = 0
@@ -260,7 +260,7 @@ class ItemBreakdownViewController: UIViewController {
         sheet.modalPresentationStyle = .overFullScreen
         sheet.onSave = { [weak self] brand, product, color, size in
             guard let self = self else { return }
-            guard !brand.isEmpty || !product.isEmpty || !color.isEmpty || !size.isEmpty else { return }
+            guard !product.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
             let newItem = PostItem(
                 id: "\(category.name.lowercased())_\(UUID().uuidString.prefix(8))",
                 brand: brand,
@@ -379,7 +379,7 @@ final class ItemEditorSheetViewController: UIViewController {
         }
 
         let hint = UILabel()
-        hint.text = "Add the optional item details shown with this OOTD."
+        hint.text = "Product is required; other item details are optional."
         hint.font = AppFont.caption()
         hint.textColor = AppTheme.textSecondary
         sheet.addSubview(hint)
@@ -407,6 +407,7 @@ final class ItemEditorSheetViewController: UIViewController {
             sheet.addSubview(label)
             return label
         }
+        optionalLabels[1].text = "Required"
 
         for (index, field) in fields.enumerated() {
             field.placeholder = placeholders[index]
@@ -500,7 +501,17 @@ final class ItemEditorSheetViewController: UIViewController {
             return
         }
         let callback = onSave
-        let values = fields.map { $0.text ?? "" }
+        let values = fields.map { ($0.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard !values[1].isEmpty else {
+            let alert = CommonAlertView(
+                title: "Missing Product",
+                message: "Please enter a product name.",
+                cancelTitle: "",
+                confirmTitle: "OK"
+            )
+            alert.show()
+            return
+        }
         dismiss(animated: false) { callback?(values[0], values[1], values[2], values[3]) }
     }
 }

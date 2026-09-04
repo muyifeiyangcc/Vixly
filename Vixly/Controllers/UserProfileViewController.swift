@@ -616,7 +616,7 @@ class UserProfileViewController: BaseViewController {
         let alert = CommonAlertView(
             title: "Connect to Chat",
             message: "Follow each other to unlock messages.",
-            cancelTitle: "OK",
+            cancelTitle: "Cancel",
             confirmTitle: "OK"
         )
         alert.show()

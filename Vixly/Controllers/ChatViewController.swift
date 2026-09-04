@@ -145,18 +145,6 @@ class ChatViewController: BaseViewController {
         nameLabel.font = AppFont.subtitle(.bold)
         nameLabel.textColor = AppTheme.textPrimary
         titleStack.addArrangedSubview(nameLabel)
-
-        let statusLabel = UILabel()
-        let isMutual = DataRepository.shared.isMutualFollowing(userId: userId)
-        let statusText = isMutual ? "●  Mutual follow · online" : "●  Follow each other to chat"
-        let status = NSMutableAttributedString(string: statusText, attributes: [
-            .font: AppFont.caption(),
-            .foregroundColor: AppTheme.textTertiary
-        ])
-        status.addAttribute(.foregroundColor, value: AppTheme.textAccent, range: NSRange(location: 0, length: 1))
-        statusLabel.attributedText = status
-        statusLabel.textColor = AppTheme.textTertiary
-        titleStack.addArrangedSubview(statusLabel)
         chatHeaderView.addSubview(titleStack)
 
         let voiceCallButton = headerButton(image: UIImage(named: "phone") ?? UIImage(systemName: "phone"), action: #selector(voiceCallTapped))
@@ -302,12 +290,12 @@ class ChatViewController: BaseViewController {
         navigationController?.popViewController(animated: true)
     }
     
-    private func loadData() {
+    private func loadData(scrollToLatest: Bool = false) {
         messages = DataRepository.shared.getMessages(for: "conv_\(userId)").reversed()
-        reloadMessages()
+        reloadMessages(scrollToLatest: scrollToLatest)
     }
     
-    private func reloadMessages() {
+    private func reloadMessages(scrollToLatest: Bool = false) {
         for subview in messagesStackView.arrangedSubviews {
             subview.removeFromSuperview()
         }
@@ -332,9 +320,26 @@ class ChatViewController: BaseViewController {
                     make.width.lessThanOrEqualToSuperview().multipliedBy(0.75)
                 }
             }
-            
+
             messagesStackView.addArrangedSubview(container)
         }
+
+        guard scrollToLatest else { return }
+        // The stack view's content size is updated during the next layout pass.
+        // Scroll after that pass so the newly sent message is actually visible.
+        DispatchQueue.main.async { [weak self] in
+            self?.scrollToLatest(animated: true)
+        }
+    }
+
+    private func scrollToLatest(animated: Bool) {
+        view.layoutIfNeeded()
+        scrollView.layoutIfNeeded()
+        let bottomOffset = max(
+            -scrollView.adjustedContentInset.top,
+            scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom
+        )
+        scrollView.setContentOffset(CGPoint(x: 0, y: bottomOffset), animated: animated)
     }
     
     private func addObservers() {
@@ -345,7 +350,7 @@ class ChatViewController: BaseViewController {
     }
     
     @objc private func messageSent() {
-        loadData()
+        loadData(scrollToLatest: true)
     }
 
     @objc private func profileUpdated() {
